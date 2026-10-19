@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOORDERLAND // DayZ Custom Map Project</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'hud-orange': '#ff6b00',
+                        'hud-orange-glow': '#ff8533',
+                        'hud-green': '#38ef7d',
+                        'hud-dark': '#0a0d0f',
+                        'hud-card': '#12181c',
+                        'hud-border': '#222f37',
+                    },
+                    fontFamily: {
+                        mono: ['Courier New', 'Consolas', 'monospace'],
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'radar-sweep': 'radar 4s linear infinite',
+                    },
+                    keyframes: {
+                        radar: {
+                            '0%': { transform: 'rotate(0deg)' },
+                            '100%': { transform: 'rotate(360deg)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        html {
+            overflow-y: auto !important;
+            height: auto !important;
+            min-height: 100%;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0d0f;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            overflow-y: auto !important;
+            min-height: 100vh;
+            position: relative;
+        }
+        .font-tech {
+            font-family: 'Share Tech Mono', monospace;
+        }
+        /* Grid Overlay Background */
+        .bg-grid-pattern {
+            background-image: radial-gradient(rgba(255, 107, 0, 0.12) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .bg-radar-grid {
+            background: linear-gradient(0deg, rgba(18, 24, 28, 0.9), rgba(10, 13, 15, 0.95)),
+                        repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255, 107, 0, 0.05) 20px),
+                        repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255, 107, 0, 0.05) 20px);
+        }
+        /* Custom Glowing Borders */
+        .glow-orange {
+            box-shadow: 0 0 15px rgba(255, 107, 0, 0.35);
+        }
+        .glow-orange-lg {
+            box-shadow: 0 0 30px rgba(255, 107, 0, 0.5);
+        }
+        .text-glow {
+            text-shadow: 0 0 8px rgba(255, 107, 0, 0.6);
+        }
+        /* Tactical Scanlines - Fixed pointer events & positioning so scrolling works everywhere */
+        .scanlines-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            z-index: 30;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0d0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff6b00;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff8533;
+        }
+    </style>
+</head>
+<body class="bg-hud-dark min-h-screen flex flex-col justify-between selection:bg-hud-orange selection:text-black">
+
+    <!-- Scanline Visual FX Overlay (non-blocking) -->
+    <div class="scanlines-overlay"></div>
+
+    <!-- HUD Overlay Header Border -->
+    <div class="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-hud-orange to-transparent z-50 pointer-events-none"></div>
+
+    <!-- MAIN NAVBAR -->
+    <header class="sticky top-0 z-40 bg-hud-dark/95 backdrop-blur-md border-b border-hud-border/80 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <div class="relative flex items-center justify-center w-10 h-10 rounded border border-hud-orange/60 bg-hud-orange/10 text-hud-orange">
+                        <i class="fa-solid font-tech fa-crosshairs text-xl animate-spin" style="animation-duration: 12s;"></i>
+                        <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-hud-orange opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-hud-orange"></span>
+                        </span>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-tech text-2xl font-black tracking-wider text-white">NOORDERLAND</span>
+                            <span class="text-xs bg-hud-orange/20 text-hud-orange px-1.5 py-0.5 rounded border border-hud-orange/40 font-tech font-bold">NL</span>
+                        </div>
+                        <div class="flex items-center text-[10px] font-tech text-gray-400 space-x-2">
+                            <span class="text-hud-orange"><i class="fa-solid fa-location-crosshairs mr-1"></i>52°22'N 4°53'E</span>
+                            <span class="text-gray-600">|</span>
+                            <span class="text-hud-green"><i class="fa-solid fa-circle text-[6px] mr-1"></i>DEV GRID ACTIVE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Badge (Desktop) -->
+                <div class="hidden lg:flex items-center bg-hud-card/80 border border-hud-border px-3 py-1.5 rounded font-tech text-xs text-gray-300 space-x-3">
+                    <div class="flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-hud-orange animate-pulse mr-2"></span>
+                        <span>STATUS: <strong class="text-hud-orange">BETA DEVELOPMENT</strong></span>
+                    </div>
+                    <span class="text-gray-600">//</span>
+                    <span class="text-gray-400">SURVIVAL SECTOR 04</span>
+                </div>
+
+                <!-- Desktop Nav Navigation -->
+                <nav class="hidden md:flex items-center space-x-6 font-tech text-sm">
+                    <a href="#lore" onclick="playUiSound('click')" class="text-gray-300 hover:text-hud-orange transition-colors duration-200">LORE</a>
+                    <a href="#map-viewer" onclick="playUiSound('click')" class="text-gray-300 hover:text-hud-orange transition-colors duration-200">TACTICAL MAP</a>
+                    <a href="#gallery" onclick="playUiSound('click')" class="text-gray-300 hover:text-hud-orange transition-colors duration-200">MEDIA</a>
+                    <a href="#recruitment" onclick="playUiSound('click')" class="text-gray-300 hover:text-hud-orange transition-colors duration-200">RECRUITMENT</a>
+                    
+                    <!-- Sound Toggle Button -->
+                    <button id="audio-toggle-btn" onclick="toggleAudioFx()" title="Toggle Atmospheric Tactical Audio" class="p-2 border border-hud-border bg-hud-card hover:border-hud-orange/50 text-gray-400 hover:text-hud-orange rounded transition-all">
+                        <i id="audio-icon" class="fa-solid fa-volume-xmark"></i>
+                    </button>
+
+                    <a href="https://discord.gg" target="_blank" onclick="playUiSound('click')" class="bg-hud-orange hover:bg-hud-orange-glow text-black font-bold px-4 py-2 rounded transition-all duration-200 glow-orange flex items-center space-x-2">
+                        <i class="fa-brands fa-discord"></i>
+                        <span>JOIN DISCORD</span>
+                    </a>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center space-x-2">
+                    <button id="audio-toggle-btn-mobile" onclick="toggleAudioFx()" class="p-2 border border-hud-border bg-hud-card text-gray-400 hover:text-hud-orange rounded">
+                        <i id="audio-icon-mobile" class="fa-solid fa-volume-xmark"></i>
+                    </button>
+                    <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="text-gray-300 hover:text-hud-orange p-2 focus:outline-none">
+                        <i class="fa-solid fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-hud-card border-b border-hud-border px-4 pt-2 pb-6 space-y-3 font-tech">
+            <a href="#lore" onclick="toggleMobileMenu()" class="block text-gray-300 hover:text-hud-orange py-1">01 // LORE</a>
+            <a href="#map-viewer" onclick="toggleMobileMenu()" class="block text-gray-300 hover:text-hud-orange py-1">02 // TACTICAL MAP</a>
+            <a href="#gallery" onclick="toggleMobileMenu()" class="block text-gray-300 hover:text-hud-orange py-1">03 // MEDIA GALLERY</a>
+            <a href="#recruitment" onclick="toggleMobileMenu()" class="block text-gray-300 hover:text-hud-orange py-1">04 // RECRUITMENT</a>
+            <a href="https://discord.gg" target="_blank" class="w-full bg-hud-orange text-black font-bold py-2 rounded flex items-center justify-center space-x-2">
+                <i class="fa-brands fa-discord"></i>
+                <span>JOIN DISCORD</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="relative min-h-[85vh] flex items-center justify-center bg-radar-grid border-b border-hud-border py-20 px-4 overflow-hidden">
+        <!-- Background Accent Radar Animation Circle -->
+        <div class="absolute w-[600px] h-[600px] rounded-full border border-hud-orange/10 pointer-events-none flex items-center justify-center animate-pulse">
+            <div class="w-[400px] h-[400px] rounded-full border border-hud-orange/15"></div>
+            <div class="w-[200px] h-[200px] rounded-full border border-hud-orange/20"></div>
+            <div class="absolute w-full h-[1px] bg-hud-orange/10"></div>
+            <div class="absolute h-full w-[1px] bg-hud-orange/10"></div>
+        </div>
+
+        <div class="relative max-w-5xl mx-auto text-center z-10 space-y-8">
+            <!-- Alert Badge -->
+            <div class="inline-flex items-center space-x-3 bg-hud-orange/10 border border-hud-orange/40 text-hud-orange px-4 py-1.5 rounded-full font-tech text-xs tracking-widest uppercase glow-orange">
+                <span class="w-2 h-2 rounded-full bg-hud-orange animate-ping"></span>
+                <span>SECTOR ALERT // POST-FLOOD SURVIVAL ZONE</span>
+            </div>
+
+            <!-- Main Title -->
+            <div class="space-y-3">
+                <h1 class="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter text-white font-tech uppercase drop-shadow-2xl">
+                    NOORDER<span class="text-hud-orange text-glow">LAND</span>
+                </h1>
+                <p class="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto font-light leading-relaxed">
+                    A harsh DayZ terrain set across the drownings of the post-apocalyptic Netherlands. Traverse submerged polders, overgrown Veluwe pine forests, breached dikes, and military water management bunkers.
+                </p>
+            </div>
+
+            <!-- Stats/HUD Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto py-4 font-tech text-left">
+                <div class="bg-hud-card/80 border border-hud-border p-3 rounded">
+                    <div class="text-xs text-gray-500 uppercase">Terrain Size</div>
+                    <div class="text-lg font-bold text-hud-orange">16 x 16 KM</div>
+                </div>
+                <div class="bg-hud-card/80 border border-hud-border p-3 rounded">
+                    <div class="text-xs text-gray-500 uppercase">Threat Level</div>
+                    <div class="text-lg font-bold text-red-500 flex items-center">
+                        <i class="fa-solid fa-triangle-exclamation mr-1.5 text-xs"></i> EXTREME
+                    </div>
+                </div>
+                <div class="bg-hud-card/80 border border-hud-border p-3 rounded">
+                    <div class="text-xs text-gray-500 uppercase">Custom POIs</div>
+                    <div class="text-lg font-bold text-white">45+ LOCATIONS</div>
+                </div>
+                <div class="bg-hud-card/80 border border-hud-border p-3 rounded">
+                    <div class="text-xs text-gray-500 uppercase">Waterworks Dungeons</div>
+                    <div class="text-lg font-bold text-hud-green">12 BUNKERS</div>
+                </div>
+            </div>
+
+            <!-- CTA Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 font-tech">
+                <a href="#map-viewer" onclick="playUiSound('click')" class="w-full sm:w-auto bg-hud-orange hover:bg-hud-orange-glow text-black font-extrabold px-8 py-4 rounded transition-all duration-300 glow-orange flex items-center justify-center space-x-3 text-base">
+                    <i class="fa-solid fa-map-location-dot text-lg"></i>
+                    <span>EXPLORE INTERACTIVE POIS</span>
+                </a>
+                <a href="#recruitment" onclick="playUiSound('click')" class="w-full sm:w-auto bg-hud-card hover:bg-hud-border border border-hud-orange/40 hover:border-hud-orange text-white font-bold px-8 py-4 rounded transition-all duration-300 flex items-center justify-center space-x-3 text-base">
+                    <i class="fa-solid fa-user-plus text-hud-orange"></i>
+                    <span>JOIN DEVELOPMENT TEAM</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- LORE OVERVIEW SECTION -->
+    <section id="lore" class="py-20 bg-hud-dark border-b border-hud-border relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="flex items-center space-x-2 text-hud-orange font-tech text-sm tracking-widest uppercase">
+                        <i class="fa-solid fa-terminal"></i>
+                        <span>HISTORICAL INCIDENT LOG // DECLASSIFIED</span>
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold font-tech text-white uppercase tracking-tight">
+                        THE GREAT BREACH & THE FALL OF THE POLDERS
+                    </h2>
+                    <div class="text-gray-300 space-y-4 text-sm sm:text-base leading-relaxed">
+                        <p>
+                            When the global collapse hit in 2028, the automated water management systems of the Netherlands ran unmaintained for 72 hours. Cyber warfare triggered the emergency floodgates of the Delta Works, breaching the major dikes and unleashing the North Sea into the low-lying provinces.
+                        </p>
+                        <p>
+                            What remains today is <strong class="text-hud-orange">Noorderland</strong>: a drowned realm where survivors navigate flooded polder towns using improvised watercraft, brave contaminated military waterworks bunkers, and fight for control over high-ground military outposts in the dense pine forests of the Veluwe.
+                        </p>
+                    </div>
+
+                    <!-- Quote Block -->
+                    <div class="border-l-2 border-hud-orange bg-hud-card/60 p-4 rounded-r font-tech text-sm text-gray-300 italic">
+                        "The dikes didn't just keep the sea out... they kept our secrets in. Now the water controls who lives and who drowns."
+                        <div class="text-xs text-hud-orange font-bold mt-2 not-italic">— Commander V. van Rijn, Dutch Defense Remnant</div>
+                    </div>
+                </div>
+
+                <!-- Lore Visual Box -->
+                <div class="lg:col-span-5 bg-hud-card border border-hud-border p-6 rounded-lg relative glow-orange/10">
+                    <div class="flex items-center justify-between border-b border-hud-border pb-3 mb-4 font-tech text-xs">
+                        <span class="text-gray-400"><i class="fa-solid fa-shield-halved mr-1 text-hud-orange"></i> TACTICAL DOSSIER</span>
+                        <span class="text-hud-orange">REF: NL-2031-FL</span>
+                    </div>
+                    
+                    <div class="space-y-4 text-xs font-tech">
+                        <div class="flex justify-between items-center py-1 border-b border-hud-border/40">
+                            <span class="text-gray-400">ENVIRONMENT TYPE:</span>
+                            <span class="text-white">Flooded Polders & Dikes</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1 border-b border-hud-border/40">
+                            <span class="text-gray-400">PRIMARY FACTION:</span>
+                            <span class="text-white">Waterworks Defense Militia</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1 border-b border-hud-border/40">
+                            <span class="text-gray-400">KEY HAZARDS:</span>
+                            <span class="text-red-400">Deep Canal Currents / Waterborne Infection</span>
+                        </div>
+                        <div class="flex justify-between items-center py-1 border-b border-hud-border/40">
+                            <span class="text-gray-400">SPECIAL MECHANICS:</span>
+                            <span class="text-hud-orange">Inundation Sluice Control / Boat Routes</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-hud-border flex items-center justify-between">
+                        <div class="text-[10px] text-gray-500 font-tech">SECURED BY MILITARY HYDRO-CORPS</div>
+                        <i class="fa-solid fa-water text-hud-orange text-xl"></i>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- INTERACTIVE MAP CONCEPT VIEWER -->
+    <section id="map-viewer" class="py-20 bg-hud-dark relative border-b border-hud-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-12 space-y-3">
+                <div class="inline-flex items-center space-x-2 text-hud-orange font-tech text-xs tracking-widest uppercase">
+                    <i class="fa-solid fa-map-marked-alt"></i>
+                    <span>TACTICAL GRID // INTERACTIVE MAP</span>
+                </div>
+                <h2 class="text-3xl sm:text-5xl font-black font-tech text-white uppercase">
+                    NOORDERLAND SECTOR POIs
+                </h2>
+                <p class="text-gray-400 text-sm sm:text-base">
+                    Click on tactical hotspots across the Dutch terrain grid to analyze strategic points of interest, threat levels, loot density, and key features.
+                </p>
+            </div>
+
+            <!-- Map Filter Bar -->
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-8 font-tech text-xs">
+                <button onclick="filterPois('all')" class="poi-filter-btn active bg-hud-orange text-black font-bold px-4 py-2 rounded transition">ALL POIs</button>
+                <button onclick="filterPois('military')" class="poi-filter-btn bg-hud-card hover:bg-hud-border border border-hud-border text-gray-300 px-4 py-2 rounded transition"><i class="fa-solid fa-shield-virus mr-1 text-hud-orange"></i> MILITARY</button>
+                <button onclick="filterPois('flooded')" class="poi-filter-btn bg-hud-card hover:bg-hud-border border border-hud-border text-gray-300 px-4 py-2 rounded transition"><i class="fa-solid fa-water mr-1 text-blue-400"></i> FLOODED ZONES</button>
+                <button onclick="filterPois('bunker')" class="poi-filter-btn bg-hud-card hover:bg-hud-border border border-hud-border text-gray-300 px-4 py-2 rounded transition"><i class="fa-solid fa-dungeon mr-1 text-hud-green"></i> FOREST BUNKERS</button>
+                <button onclick="filterPois('urban')" class="poi-filter-btn bg-hud-card hover:bg-hud-border border border-hud-border text-gray-300 px-4 py-2 rounded transition"><i class="fa-solid fa-city mr-1 text-yellow-500"></i> URBAN RUINS</button>
+            </div>
+
+            <!-- Interactive Map Container -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Vector Map Area -->
+                <div class="lg:col-span-8 bg-hud-card border border-hud-border rounded-lg p-4 relative overflow-hidden shadow-2xl min-h-[480px] sm:min-h-[550px] flex flex-col justify-between">
+                    
+                    <!-- Map Header overlay -->
+                    <div class="absolute top-4 left-4 z-10 font-tech text-xs bg-hud-dark/90 border border-hud-border p-2 rounded flex items-center space-x-3">
+                        <span class="text-hud-orange"><i class="fa-solid fa-compass animate-spin"></i> GRID: NL-16KM</span>
+                        <span class="text-gray-500">|</span>
+                        <span class="text-gray-300">NORTH SEA COAST SECTOR</span>
+                    </div>
+
+                    <!-- Map SVG Visual Layer -->
+                    <div class="relative w-full h-[450px] sm:h-[500px] bg-[#0c1216] rounded border border-hud-border/60 overflow-hidden">
+                        
+                        <!-- Grid Lines -->
+                        <div class="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none"></div>
+
+                        <!-- Stylized Netherlands Terrain SVG Paths -->
+                        <svg class="w-full h-full text-hud-border/40" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M 0,0 L 800,0 L 800,200 C 600,250 500,100 300,220 C 150,300 50,200 0,250 Z" fill="#0f222d" opacity="0.6"/>
+                            <path d="M 120,600 C 200,450 250,350 320,280 C 400,200 550,220 800,150" stroke="#ff6b00" stroke-width="2" stroke-dasharray="4 4" opacity="0.4"/>
+                            <path d="M 0,350 Q 200,380 450,420 T 800,500" stroke="#38ef7d" stroke-width="1.5" stroke-dasharray="2 2" opacity="0.3"/>
+                            <path d="M 100,550 Q 180,420 300,400 T 550,300 T 750,180" stroke="#3d4e59" stroke-width="3" fill="none"/>
+                            <path d="M 50,200 C 120,180 250,220 380,150 C 480,100 650,120 780,50" stroke="#3d4e59" stroke-width="2" fill="none"/>
+                        </svg>
+
+                        <!-- POI Hotspot Markers -->
+                        
+                        <!-- POI 1: Maeslant Flood Barrier Alpha -->
+                        <div data-category="military flooded" onclick="selectPoi(0)" class="poi-marker absolute top-[28%] left-[22%] -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20">
+                            <div class="relative flex items-center justify-center">
+                                <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-hud-orange opacity-60"></span>
+                                <div class="w-7 h-7 rounded-full bg-hud-dark border-2 border-hud-orange text-hud-orange flex items-center justify-center font-tech text-xs font-bold group-hover:scale-125 transition-transform shadow-lg shadow-hud-orange/50">
+                                    <i class="fa-solid fa-water"></i>
+                                </div>
+                                <span class="absolute left-8 whitespace-nowrap bg-hud-dark/90 border border-hud-orange/60 px-2 py-0.5 rounded font-tech text-[11px] text-hud-orange hidden sm:block">Maeslant Barrier Alpha</span>
+                            </div>
+                        </div>
+
+                        <!-- POI 2: Veluwe Overgrown Bunker Complex -->
+                        <div data-category="bunker military" onclick="selectPoi(1)" class="poi-marker absolute top-[62%] left-[68%] -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20">
+                            <div class="relative flex items-center justify-center">
+                                <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-hud-green opacity-60"></span>
+                                <div class="w-7 h-7 rounded-full bg-hud-dark border-2 border-hud-green text-hud-green flex items-center justify-center font-tech text-xs font-bold group-hover:scale-125 transition-transform shadow-lg shadow-hud-green/50">
+                                    <i class="fa-solid fa-tree"></i>
+                                </div>
+                                <span class="absolute left-8 whitespace-nowrap bg-hud-dark/90 border border-hud-green/60 px-2 py-0.5 rounded font-tech text-[11px] text-hud-green hidden sm:block">Veluwe Bunker Complex</span>
+                            </div>
+                        </div>
+
+                        <!-- POI 3: Nieuw-Polder Submerged City -->
+                        <div data-category="urban flooded" onclick="selectPoi(2)" class="poi-marker absolute top-[48%] left-[42%] -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20">
+                            <div class="relative flex items-center justify-center">
+                                <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-yellow-500 opacity-60"></span>
+                                <div class="w-7 h-7 rounded-full bg-hud-dark border-2 border-yellow-500 text-yellow-500 flex items-center justify-center font-tech text-xs font-bold group-hover:scale-125 transition-transform shadow-lg shadow-yellow-500/50">
+                                    <i class="fa-solid fa-city"></i>
+                                </div>
+                                <span class="absolute left-8 whitespace-nowrap bg-hud-dark/90 border border-yellow-500/60 px-2 py-0.5 rounded font-tech text-[11px] text-yellow-400 hidden sm:block">Nieuw-Polder Ruins</span>
+                            </div>
+                        </div>
+
+                        <!-- POI 4: Afsluitdijk North Outpost -->
+                        <div data-category="military" onclick="selectPoi(3)" class="poi-marker absolute top-[15%] left-[58%] -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20">
+                            <div class="relative flex items-center justify-center">
+                                <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-hud-orange opacity-60"></span>
+                                <div class="w-7 h-7 rounded-full bg-hud-dark border-2 border-hud-orange text-hud-orange flex items-center justify-center font-tech text-xs font-bold group-hover:scale-125 transition-transform shadow-lg shadow-hud-orange/50">
+                                    <i class="fa-solid fa-tower-observation"></i>
+                                </div>
+                                <span class="absolute left-8 whitespace-nowrap bg-hud-dark/90 border border-hud-orange/60 px-2 py-0.5 rounded font-tech text-[11px] text-hud-orange hidden sm:block">Afsluitdijk Outpost</span>
+                            </div>
+                        </div>
+
+                        <!-- POI 5: Rotterdam Europort Ruins -->
+                        <div data-category="urban flooded" onclick="selectPoi(4)" class="poi-marker absolute top-[75%] left-[25%] -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-20">
+                            <div class="relative flex items-center justify-center">
+                                <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-blue-400 opacity-60"></span>
+                                <div class="w-7 h-7 rounded-full bg-hud-dark border-2 border-blue-400 text-blue-400 flex items-center justify-center font-tech text-xs font-bold group-hover:scale-125 transition-transform shadow-lg shadow-blue-400/50">
+                                    <i class="fa-solid fa-anchor"></i>
+                                </div>
+                                <span class="absolute left-8 whitespace-nowrap bg-hud-dark/90 border border-blue-400/60 px-2 py-0.5 rounded font-tech text-[11px] text-blue-300 hidden sm:block">Europort Container Maze</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Map Footer info -->
+                    <div class="mt-3 flex items-center justify-between text-[11px] font-tech text-gray-400">
+                        <span><i class="fa-solid fa-hand-pointer mr-1 text-hud-orange"></i> SELECT MARKER TO DISPLAY HUD DOSSIER</span>
+                        <span class="text-hud-orange font-bold">SCALE 1:25000</span>
+                    </div>
+
+                </div>
+
+                <!-- POI Detail Sidebar Card -->
+                <div class="lg:col-span-4 bg-hud-card border border-hud-border p-6 rounded-lg space-y-5 glow-orange/10 min-h-[480px]">
+                    <div class="flex items-center justify-between border-b border-hud-border pb-3">
+                        <span class="text-xs font-tech text-gray-400 uppercase tracking-wider"><i class="fa-solid fa-radar mr-1 text-hud-orange"></i> SELECTED TARGET DATA</span>
+                        <span id="poi-index" class="text-xs font-tech text-hud-orange">POI #01</span>
+                    </div>
+
+                    <div id="poi-details" class="space-y-4">
+                        <!-- Loaded dynamically via JS -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FILTERABLE ASSET & MEDIA GALLERY -->
+    <section id="gallery" class="py-20 bg-hud-dark border-b border-hud-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+                <div>
+                    <div class="inline-flex items-center space-x-2 text-hud-orange font-tech text-xs tracking-widest uppercase mb-2">
+                        <i class="fa-solid fa-images"></i>
+                        <span>DEVELOPMENT SHOWCASE</span>
+                    </div>
+                    <h2 class="text-3xl sm:text-5xl font-black font-tech text-white uppercase">
+                        CUSTOM ASSET GALLERY
+                    </h2>
+                </div>
+
+                <!-- Gallery Tabs -->
+                <div class="mt-6 md:mt-0 flex flex-wrap gap-2 font-tech text-xs">
+                    <button onclick="filterGallery('all')" class="gallery-tab-btn active bg-hud-orange text-black font-bold px-3 py-1.5 rounded transition">ALL</button>
+                    <button onclick="filterGallery('terrain')" class="gallery-tab-btn bg-hud-card border border-hud-border text-gray-300 hover:border-hud-orange px-3 py-1.5 rounded transition">TERRAIN & POLDERS</button>
+                    <button onclick="filterGallery('bunkers')" class="gallery-tab-btn bg-hud-card border border-hud-border text-gray-300 hover:border-hud-orange px-3 py-1.5 rounded transition">UNDERGROUND BUNKERS</button>
+                    <button onclick="filterGallery('lighting')" class="gallery-tab-btn bg-hud-card border border-hud-border text-gray-300 hover:border-hud-orange px-3 py-1.5 rounded transition">ATMOSPHERIC LIGHTING</button>
+                    <button onclick="filterGallery('props')" class="gallery-tab-btn bg-hud-card border border-hud-border text-gray-300 hover:border-hud-orange px-3 py-1.5 rounded transition">TACTICAL PROPS</button>
+                </div>
+            </div>
+
+            <!-- Gallery Grid -->
+            <div id="gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Gallery Items generated via JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- RECRUITMENT PORTAL -->
+    <section id="recruitment" class="py-20 bg-hud-dark relative border-b border-hud-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16 space-y-3">
+                <div class="inline-flex items-center space-x-2 text-hud-orange font-tech text-xs tracking-widest uppercase">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>JOIN THE NOORDERLAND TASK FORCE</span>
+                </div>
+                <h2 class="text-3xl sm:text-5xl font-black font-tech text-white uppercase">
+                    OPEN DEVELOPMENT ROLES
+                </h2>
+                <p class="text-gray-400 text-sm sm:text-base">
+                    We are actively expanding the Noorderland development team. If you are passionate about post-apocalyptic Dutch environments, DayZ engine workflows, or level design flow, apply below.
+                </p>
+            </div>
+
+            <!-- Roles Cards Grid (3D Modeler & Visual Planner) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                
+                <!-- Role Card 1: 3D Modeler -->
+                <div class="bg-hud-card border border-hud-border hover:border-hud-orange/80 transition-all duration-300 rounded-lg p-6 flex flex-col justify-between relative group glow-orange/5">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="bg-hud-orange/20 text-hud-orange border border-hud-orange/40 font-tech text-[10px] px-2 py-0.5 rounded uppercase">CRITICAL ROLE</span>
+                                <h3 class="text-2xl font-black font-tech text-white mt-2">3D MODELER</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded bg-hud-dark border border-hud-border flex items-center justify-center text-hud-orange text-2xl">
+                                <i class="fa-solid fa-cube"></i>
+                            </div>
+                        </div>
+
+                        <p class="text-gray-300 text-sm leading-relaxed">
+                            Construct unique post-apocalyptic Dutch asset sets, including waterworks machinery, overgrown dike sluices, rusted maritime containers, and post-Soviet military props tailored for DayZ asset specs.
+                        </p>
+
+                        <div class="space-y-3 pt-2 font-tech text-xs">
+                            <div class="border-t border-hud-border/60 pt-3">
+                                <div class="text-hud-orange font-bold mb-1"><i class="fa-solid fa-screwdriver-wrench mr-1"></i> REQUIRED SOFTWARE:</div>
+                                <div class="text-gray-300 flex flex-wrap gap-1.5">
+                                    <span class="bg-hud-dark px-2 py-0.5 rounded border border-hud-border">Blender / 3ds Max</span>
+                                    <span class="bg-hud-dark px-2 py-0.5 rounded border border-hud-border">Substance Painter</span>
+                                    <span class="bg-hud-dark px-2 py-0.5 rounded border border-hud-border">DayZ Tools / Object Builder</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="text-hud-orange font-bold mb-1"><i class="fa-solid fa-list-check mr-1"></i> CORE RESPONSIBILITIES:</div>
+                                <ul class="text-gray-400 space-y-1 list-disc list-inside text-[11px]">
+                                    <li>High to low-poly baking & game-ready LOD optimization</li>
+                                    <li>Creating custom collision meshes (Geometry & View Geometry)</li>
+                                    <li>PBR texture mapping matching DayZ lighting engine</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-4 border-t border-hud-border">
+                        <button onclick="openApplyModal('3D Modeler')" class="w-full bg-hud-orange hover:bg-hud-orange-glow text-black font-bold py-3 rounded font-tech text-sm transition duration-200 glow-orange flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>APPLY AS 3D MODELER</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Role Card 2: Visual Planner & Level Designer -->
+                <div class="bg-hud-card border border-hud-border hover:border-hud-orange/80 transition-all duration-300 rounded-lg p-6 flex flex-col justify-between relative group glow-orange/5">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="bg-hud-green/20 text-hud-green border border-hud-green/40 font-tech text-[10px] px-2 py-0.5 rounded uppercase">HIGH PRIORITY</span>
+                                <h3 class="text-2xl font-black font-tech text-white mt-2">VISUAL PLANNER</h3>
+                            </div>
+                            <div class="w-12 h-12 rounded bg-hud-dark border border-hud-border flex items-center justify-center text-hud-green text-2xl">
+                                <i class="fa-solid fa-map"></i>
+                            </div>
+                        </div>
+
+                        <p class="text-gray-300 text-sm leading-relaxed">
+                            Shape the tactical flow and visual storytelling of Noorderland. Design POI layouts, sightline balance across flat polders, loot tier distribution hierarchy, and terrain elevation transitions.
+                        </p>
+
+                        <div class="space-y-3 pt-2 font-tech text-xs">
+                            <div class="border-t border-hud-border/60 pt-3">
+                                <div class="text-hud-green font-bold mb-1"><i class="fa-solid fa-screwdriver-wrench mr-1"></i> REQUIRED SOFTWARE:</div>
+                                <div class="text-gray-300 flex flex-wrap gap-1.5">
+                                    <span class="bg-hud-dark px-2 py-0.5 rounded border border-hud-border">Terrain Builder</span>
+                                    <span class="bg-hud-dark px-2 py-0.5 rounded border border-hud-border">QGIS / World Machine</span>
+                                    <span class="bg-hud-dark px-2 py-0.5 rounded border border-hud-border">DayZ Map Tools</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="text-hud-green font-bold mb-1"><i class="fa-solid fa-list-check mr-1"></i> CORE RESPONSIBILITIES:</div>
+                                <ul class="text-gray-400 space-y-1 list-disc list-inside text-[11px]">
+                                    <li>Designing POI zoning & cover balance across open polder plains</li>
+                                    <li>Loot distribution matrix & macro-level map navigation flow</li>
+                                    <li>Environmental storytelling (flood destruction, military checkpoints)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-4 border-t border-hud-border">
+                        <button onclick="openApplyModal('Visual Planner')" class="w-full bg-hud-card hover:bg-hud-border border border-hud-green/60 text-hud-green font-bold py-3 rounded font-tech text-sm transition duration-200 flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>APPLY AS VISUAL PLANNER</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ ACCORDION SECTION -->
+    <section class="py-16 bg-hud-dark border-b border-hud-border">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-2xl font-bold font-tech text-white text-center mb-8 uppercase flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-circle-question text-hud-orange"></i>
+                <span>PROJECT FREQUENTLY ASKED QUESTIONS</span>
+            </h2>
+
+            <div class="space-y-4 font-tech text-sm" id="faq-container">
+                <div class="bg-hud-card border border-hud-border rounded overflow-hidden">
+                    <button onclick="toggleFaq(this)" class="w-full text-left p-4 flex justify-between items-center text-white font-bold hover:text-hud-orange transition">
+                        <span>Q: When will Noorderland be available on the DayZ Steam Workshop?</span>
+                        <i class="fa-solid fa-chevron-down text-hud-orange transition-transform duration-200"></i>
+                    </button>
+                    <div class="hidden p-4 pt-0 text-gray-400 text-xs leading-relaxed border-t border-hud-border/40">
+                        Noorderland is currently in closed Alpha/Beta testing with planned public playtests targeted for late 2026. Join our Discord server for playtest keys and early map access logs.
+                    </div>
+                </div>
+
+                <div class="bg-hud-card border border-hud-border rounded overflow-hidden">
+                    <button onclick="toggleFaq(this)" class="w-full text-left p-4 flex justify-between items-center text-white font-bold hover:text-hud-orange transition">
+                        <span>Q: Are applicants required to have prior DayZ modding experience?</span>
+                        <i class="fa-solid fa-chevron-down text-hud-orange transition-transform duration-200"></i>
+                    </button>
+                    <div class="hidden p-4 pt-0 text-gray-400 text-xs leading-relaxed border-t border-hud-border/40">
+                        For 3D Modelers, game-ready PBR modeling experience (Blender/Substance) is essential; we can assist with DayZ engine implementation. For Visual Planners, prior experience with DayZ Terrain Builder or similar game engines (Unreal/Arma) is highly preferred.
+                    </div>
+                </div>
+
+                <div class="bg-hud-card border border-hud-border rounded overflow-hidden">
+                    <button onclick="toggleFaq(this)" class="w-full text-left p-4 flex justify-between items-center text-white font-bold hover:text-hud-orange transition">
+                        <span>Q: How big is the map and does it include custom vehicles?</span>
+                        <i class="fa-solid fa-chevron-down text-hud-orange transition-transform duration-200"></i>
+                    </button>
+                    <div class="hidden p-4 pt-0 text-gray-400 text-xs leading-relaxed border-t border-hud-border/40">
+                        The terrain spans 16x16 km with high terrain detail density. It features custom military patrol boats, amphibious barges, and specialized post-apocalyptic Dutch civilian vehicles.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-black py-10 border-t border-hud-border text-gray-500 font-tech text-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded border border-hud-orange/40 flex items-center justify-center text-hud-orange">
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+                <div>
+                    <div class="text-white font-bold">NOORDERLAND PROJECT</div>
+                    <div class="text-[10px]">DAYZ CUSTOM MAP DEVELOPMENT // DUTCH SURVIVAL SECTOR</div>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-6">
+                <a href="https://discord.gg" target="_blank" class="hover:text-hud-orange transition"><i class="fa-brands fa-discord text-lg mr-1"></i> DISCORD</a>
+                <a href="https://store.steampowered.com" target="_blank" class="hover:text-hud-orange transition"><i class="fa-brands fa-steam text-lg mr-1"></i> STEAM WORKSHOP</a>
+                <a href="https://twitter.com" target="_blank" class="hover:text-hud-orange transition"><i class="fa-brands fa-x-twitter text-lg mr-1"></i> TWITTER</a>
+            </div>
+
+            <div class="text-right text-[10px]">
+                <div>NOT AFFILIATED WITH BOHEMIA INTERACTIVE</div>
+                <div class="text-gray-600">© 2026 NOORDERLAND DEV CREW. ALL RIGHTS RESERVED.</div>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- RECRUITMENT APPLICATION MODAL -->
+    <div id="apply-modal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-hud-card border-2 border-hud-orange rounded-lg max-w-2xl w-full p-6 sm:p-8 relative glow-orange-lg my-8 max-h-[90vh] overflow-y-auto">
+            
+            <!-- Modal Close Button -->
+            <button onclick="closeApplyModal()" class="absolute top-4 right-4 text-gray-400 hover:text-hud-orange font-tech text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="border-b border-hud-border pb-4 mb-6">
+                <div class="text-hud-orange font-tech text-xs uppercase tracking-wider mb-1">
+                    <i class="fa-solid fa-satellite-dish animate-pulse mr-1"></i> SECURE TRANSMISSION TO HQ
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-black font-tech text-white uppercase">
+                    APPLICATION FORM // <span id="modal-role-title" class="text-hud-orange">3D MODELER</span>
+                </h3>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="application-form" onsubmit="handleFormSubmit(event)" class="space-y-5 font-tech text-xs">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-300 mb-1">CALLSIGN / HANDLE <span class="text-hud-orange">*</span></label>
+                        <input type="text" required placeholder="e.g. Survivor_NL" class="w-full bg-hud-dark border border-hud-border focus:border-hud-orange text-white p-2.5 rounded focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 mb-1">DISCORD TAG <span class="text-hud-orange">*</span></label>
+                        <input type="text" required placeholder="username#0000 or @username" class="w-full bg-hud-dark border border-hud-border focus:border-hud-orange text-white p-2.5 rounded focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-300 mb-1">APPLYING ROLE <span class="text-hud-orange">*</span></label>
+                    <select id="modal-role-select" class="w-full bg-hud-dark border border-hud-border focus:border-hud-orange text-white p-2.5 rounded focus:outline-none">
+                        <option value="3D Modeler">3D Modeler (Dutch Props, Waterworks, DayZ Assets)</option>
+                        <option value="Visual Planner">Visual Planner (POI Zoning, Terrain Builder, Map Flow)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-gray-300 mb-1">PORTFOLIO / ARTSTATION / GITHUB LINK <span class="text-hud-orange">*</span></label>
+                    <input type="url" required placeholder="https://www.artstation.com/yourprofile" class="w-full bg-hud-dark border border-hud-border focus:border-hud-orange text-white p-2.5 rounded focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-gray-300 mb-1">SOFTWARE PROFICIENCY & EXPERIENCE</label>
+                    <textarea rows="3" placeholder="Detail your experience with Blender, Substance, DayZ Tools, Terrain Builder, or QGIS..." class="w-full bg-hud-dark border border-hud-border focus:border-hud-orange text-white p-2.5 rounded focus:outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-gray-300 mb-1">WHY NOORDERLAND? / BRIEF STATEMENT</label>
+                    <textarea rows="2" placeholder="Tell us what excites you about building a flooded post-apocalyptic Netherlands map..." class="w-full bg-hud-dark border border-hud-border focus:border-hud-orange text-white p-2.5 rounded focus:outline-none"></textarea>
+                </div>
+
+                <!-- Simulation Output Console Log -->
+                <div id="modal-console-log" class="hidden bg-black border border-hud-border p-3 rounded text-[11px] text-hud-green space-y-1">
+                    <div>[SYS]: INITIALIZING ENCRYPTED PACKET...</div>
+                    <div id="console-step-2" class="hidden">[SYS]: TRANSMITTING DATA TO NOORDERLAND HQ...</div>
+                    <div id="console-step-3" class="hidden text-hud-orange">[SUCCESS]: APPLICATION RECORDED. RECRUITMENT OFFICERS WILL CONTACT YOU ON DISCORD!</div>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeApplyModal()" class="px-5 py-2.5 bg-hud-dark hover:bg-hud-border text-gray-300 rounded font-bold">CANCEL</button>
+                    <button type="submit" id="submit-btn" class="px-6 py-2.5 bg-hud-orange hover:bg-hud-orange-glow text-black font-bold rounded glow-orange flex items-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span>TRANSMIT APPLICATION</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX MODAL FOR GALLERY PREVIEW -->
+    <div id="lightbox-modal" class="fixed inset-0 z-50 hidden bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-hud-card border border-hud-orange rounded-lg max-w-4xl w-full p-6 relative overflow-hidden space-y-4">
+            <button onclick="closeLightbox()" class="absolute top-4 right-4 text-gray-400 hover:text-hud-orange font-tech text-2xl z-10">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div id="lightbox-content" class="space-y-4">
+                <!-- Dynamically filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let audioCtx = null;
+        let audioFxEnabled = false;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function toggleAudioFx() {
+            initAudioContext();
+            audioFxEnabled = !audioFxEnabled;
+            
+            const iconDesktop = document.getElementById('audio-icon');
+            const iconMobile = document.getElementById('audio-icon-mobile');
+            
+            if (audioFxEnabled) {
+                iconDesktop.className = 'fa-solid fa-volume-high text-hud-orange';
+                iconMobile.className = 'fa-solid fa-volume-high text-hud-orange';
+                playUiSound('click');
+                startGeigerClicker();
+            } else {
+                iconDesktop.className = 'fa-solid fa-volume-xmark';
+                iconMobile.className = 'fa-solid fa-volume-xmark';
+            }
+        }
+
+        function playUiSound(type) {
+            if (!audioFxEnabled) return;
+            initAudioContext();
+
+            if (type === 'click') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            }
+        }
+
+        function startGeigerClicker() {
+            if (!audioFxEnabled) return;
+            setInterval(() => {
+                if (audioFxEnabled && Math.random() > 0.6) {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(1200 + Math.random() * 800, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.02);
+                }
+            }, 800);
+        }
+
+        const poiData = [
+            {
+                name: "Maeslant Flood Barrier Alpha",
+                category: "military flooded",
+                threat: "EXTREME (TIER 4)",
+                threatColor: "text-red-500",
+                loot: "High-Tier Military Hydro Gear & Firearms",
+                coord: "51°57'N 4°09'E",
+                desc: "A massive submerged floodgate complex control fortress. Features underground flood management tunnels, military armories, and high-risk flooded elevator shafts.",
+                features: ["Underground Control Hub", "Scuba Gear Spawns", "Contaminated Waterways", "Military Armory"]
+            },
+            {
+                name: "Veluwe Overgrown Bunker Complex",
+                category: "bunker military",
+                threat: "HIGH (TIER 3)",
+                threatColor: "text-hud-orange",
+                loot: "Research Supplies, NVGs & Tactical CBRN Suits",
+                coord: "52°08'N 5°55'E",
+                desc: "Subterranean cold-war research bunkers embedded deep in the dense pine forest. Heavy foliage provides sniper cover, while underground tunnels hold high-value tech.",
+                features: ["Cold War Sub-levels", "Dense Pine Forest Canopy", "NVG/Lab Loot Tier", "Keycard Door System"]
+            },
+            {
+                name: "Nieuw-Polder Submerged City",
+                category: "urban flooded",
+                threat: "MEDIUM (TIER 2)",
+                threatColor: "text-yellow-400",
+                loot: "Civilian Food, Medical Supplies & Boat Engines",
+                coord: "52°23'N 4°38'E",
+                desc: "A sprawling flooded residential urban area where survivors built wooden skybridges and raft causeways between rooftops above drowned canals.",
+                features: ["Rooftop Skybridges", "Submerged Shopping Malls", "Improvised Raft Routes", "Urban Sniper Lines"]
+            },
+            {
+                name: "Afsluitdijk North Outpost",
+                category: "military",
+                threat: "HIGH (TIER 3)",
+                threatColor: "text-hud-orange",
+                loot: "Long-Range Rifles, Military Radio Transmitters",
+                coord: "52°59'N 5°15'E",
+                desc: "A wind-battered coastal dike checkpoint. Exposed sniper watchtowers overlook the vast North Sea waters, blocking access between northern polders.",
+                features: ["Radar Array Towers", "Exposed Sniper Dike", "Coastal Water Physics", "High Military Loot"]
+            },
+            {
+                name: "Rotterdam Europort Ruins",
+                category: "urban flooded",
+                threat: "EXTREME (TIER 4)",
+                threatColor: "text-red-500",
+                loot: "Heavy Industrial Tools, Building Materials, Vehicles",
+                coord: "51°53'N 4°18'E",
+                desc: "A towering labyrinth of rusted shipping containers, overturned cargo ships, and crane scaffolding submerged in brackish water.",
+                features: ["Container Maze CQB", "Shipwreck Dungeons", "Heavy Vehicle Parts", "High Player Concentration"]
+            }
+        ];
+
+        function selectPoi(index) {
+            playUiSound('click');
+            const poi = poiData[index];
+            document.getElementById('poi-index').innerText = `POI #0${index + 1}`;
+            
+            const detailContainer = document.getElementById('poi-details');
+            detailContainer.innerHTML = `
+                <div>
+                    <h3 class="text-xl font-black font-tech text-white uppercase">${poi.name}</h3>
+                    <div class="text-xs font-tech text-hud-orange mt-1">
+                        <i class="fa-solid fa-location-dot mr-1"></i> COORD: ${poi.coord}
+                    </div>
+                </div>
+
+                <div class="bg-hud-dark/80 border border-hud-border/80 p-3 rounded text-xs font-tech space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">THREAT LEVEL:</span>
+                        <span class="${poi.threatColor} font-bold">${poi.threat}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">LOOT CLASS:</span>
+                        <span class="text-white">${poi.loot}</span>
+                    </div>
+                </div>
+
+                <p class="text-gray-300 text-xs leading-relaxed font-sans">
+                    ${poi.desc}
+                </p>
+
+                <div>
+                    <div class="text-xs font-tech text-hud-orange font-bold uppercase mb-2"><i class="fa-solid fa-circle-info mr-1"></i> KEY TACTICAL FEATURES:</div>
+                    <div class="grid grid-cols-2 gap-2 font-tech text-[11px]">
+                        ${poi.features.map(f => `<div class="bg-hud-dark p-2 rounded border border-hud-border/60 text-gray-300 flex items-center"><i class="fa-solid fa-check text-hud-orange mr-1.5 text-[9px]"></i>${f}</div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterPois(category) {
+            playUiSound('click');
+            const btns = document.querySelectorAll('.poi-filter-btn');
+            btns.forEach(btn => btn.classList.remove('bg-hud-orange', 'text-black', 'active'));
+            event.target.classList.add('bg-hud-orange', 'text-black', 'active');
+
+            const markers = document.querySelectorAll('.poi-marker');
+            markers.forEach(marker => {
+                const cats = marker.getAttribute('data-category');
+                if (category === 'all' || cats.includes(category)) {
+                    marker.style.display = 'block';
+                } else {
+                    marker.style.display = 'none';
+                }
+            });
+        }
+
+        const galleryData = [
+            {
+                title: "Inundated Polder Sluice Gate",
+                cat: "terrain",
+                tag: "Custom Terrain & Polders",
+                img: "https://placehold.co/800x500/12181c/ff6b00?text=Noorderland+Sluice+Gate+Terrain",
+                desc: "Fully custom watergate physics model designed to allow dynamic player-controlled flooding mechanics in sector 02."
+            },
+            {
+                title: "Underground Bunker Command Deck",
+                cat: "bunkers",
+                tag: "Underground Bunkers",
+                img: "https://placehold.co/800x500/0a0d0f/38ef7d?text=Veluwe+Underground+Bunker",
+                desc: "Subterranean bunker system with custom volumetric fog, flickering emergency backup generators, and keycard doors."
+            },
+            {
+                title: "Dusk Fog Over Reclaimed Dike",
+                cat: "lighting",
+                tag: "Atmospheric Lighting",
+                img: "https://placehold.co/800x500/1a120c/ff6b00?text=Post-Apocalyptic+Dutch+Dusk",
+                desc: "Custom atmospheric skybox configuration depicting harsh North Sea fog rolling over ruined windmill silhouettes."
+            },
+            {
+                title: "Post-Soviet Dutch Waterworks Props",
+                cat: "props",
+                tag: "Tactical Props",
+                img: "https://placehold.co/800x500/12181c/ffffff?text=Dutch+Hydro+Machinery+Props",
+                desc: "PBR game-ready 3D prop assets optimized for DayZ engine memory budgets and custom loot table distribution."
+            },
+            {
+                title: "Submerged Nieuw-Polder Canal Bridge",
+                cat: "terrain",
+                tag: "Custom Terrain & Polders",
+                img: "https://placehold.co/800x500/0c1820/ff6b00?text=Flooded+Canal+Skybridge",
+                desc: "Tactical urban water choke points with raft routes and player-constructed skybridge vantage points."
+            },
+            {
+                title: "CBRN Decontamination Tunnel",
+                cat: "bunkers",
+                tag: "Underground Bunkers",
+                img: "https://placehold.co/800x500/101f18/00ff88?text=Decontamination+Vault",
+                desc: "Toxic radiation zone entry bunker requiring full gas masks and filter maintenance to access high-tier weapons."
+            }
+        ];
+
+        function renderGallery() {
+            const container = document.getElementById('gallery-grid');
+            container.innerHTML = galleryData.map((item, idx) => `
+                <div data-cat="${item.cat}" onclick="openLightbox(${idx})" class="gallery-card bg-hud-card border border-hud-border rounded-lg overflow-hidden cursor-pointer group hover:border-hud-orange transition-all duration-300">
+                    <div class="relative h-48 overflow-hidden bg-black">
+                        <img src="${item.img}" alt="${item.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100">
+                        <span class="absolute top-3 left-3 bg-hud-dark/90 text-hud-orange border border-hud-orange/40 font-tech text-[10px] px-2 py-0.5 rounded">
+                            ${item.tag}
+                        </span>
+                    </div>
+                    <div class="p-4 space-y-2 font-tech">
+                        <h4 class="text-white font-bold text-base group-hover:text-hud-orange transition-colors">${item.title}</h4>
+                        <p class="text-gray-400 text-xs line-clamp-2">${item.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterGallery(category) {
+            playUiSound('click');
+            const btns = document.querySelectorAll('.gallery-tab-btn');
+            btns.forEach(btn => btn.classList.remove('bg-hud-orange', 'text-black', 'active'));
+            event.target.classList.add('bg-hud-orange', 'text-black', 'active');
+
+            const cards = document.querySelectorAll('.gallery-card');
+            cards.forEach(card => {
+                if (category === 'all' || card.getAttribute('data-cat') === category) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function openLightbox(idx) {
+            playUiSound('click');
+            const item = galleryData[idx];
+            const content = document.getElementById('lightbox-content');
+            content.innerHTML = `
+                <div class="relative max-h-[60vh] overflow-hidden rounded border border-hud-border">
+                    <img src="${item.img}" class="w-full object-cover">
+                </div>
+                <div class="font-tech space-y-2">
+                    <span class="text-xs bg-hud-orange/20 text-hud-orange border border-hud-orange/40 px-2 py-0.5 rounded">${item.tag}</span>
+                    <h3 class="text-2xl font-black text-white uppercase">${item.title}</h3>
+                    <p class="text-gray-300 text-xs sm:text-sm leading-relaxed">${item.desc}</p>
+                </div>
+            `;
+            document.getElementById('lightbox-modal').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            playUiSound('click');
+            document.getElementById('lightbox-modal').classList.add('hidden');
+        }
+
+        function openApplyModal(roleName) {
+            playUiSound('click');
+            document.getElementById('modal-role-title').innerText = roleName.toUpperCase();
+            document.getElementById('modal-role-select').value = roleName;
+            document.getElementById('apply-modal').classList.remove('hidden');
+        }
+
+        function closeApplyModal() {
+            playUiSound('click');
+            document.getElementById('apply-modal').classList.add('hidden');
+            document.getElementById('modal-console-log').classList.add('hidden');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            playUiSound('click');
+            
+            const consoleLog = document.getElementById('modal-console-log');
+            const step2 = document.getElementById('console-step-2');
+            const step3 = document.getElementById('console-step-3');
+            const submitBtn = document.getElementById('submit-btn');
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50');
+            consoleLog.classList.remove('hidden');
+
+            setTimeout(() => {
+                step2.classList.remove('hidden');
+            }, 800);
+
+            setTimeout(() => {
+                step3.classList.remove('hidden');
+                submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>TRANSMITTED!</span>';
+            }, 1800);
+        }
+
+        function toggleFaq(btn) {
+            playUiSound('click');
+            const answer = btn.nextElementSibling;
+            const icon = btn.querySelector('i');
+            
+            if (answer.classList.contains('hidden')) {
+                answer.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                answer.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function toggleMobileMenu() {
+            playUiSound('click');
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        window.onload = function() {
+            selectPoi(0);
+            renderGallery();
+        };
+    </script>
+</body>
+</html>
